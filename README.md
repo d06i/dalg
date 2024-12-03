@@ -44,7 +44,15 @@ fn str() {
 }
 ```
 
-#### To-Do
+## Usage 
+````
+  Generate LLVM IR Code-> dalg.exe input.dalg output.ll
+````
+````
+  Executable file -> clang.exe output.ll -o output.exe
+ ````  
+
+### To-Do
   + For loop expression
   + Operator precedence
   + Global Variable
