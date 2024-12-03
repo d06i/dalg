@@ -52,6 +52,10 @@ fn str() {
   Executable file -> clang.exe output.ll -o output.exe
  ````  
 
+### Requirements
+  + LLVM 14
+
+   
 ### To-Do
   + For loop expression
   + Operator precedence
