@@ -1,4 +1,3 @@
-
 #include "parser.h"
 #include "utility.h"
 
@@ -10,9 +9,13 @@ void initializeLLVM() {
 }
 
 
-void compile_Run(std::vector<TokenStore>& tokens) {
+void compile_Run( const std::string& filename ) {
     initializeLLVM();
-    Parser parser(tokens);
+
+    auto code = readFile(filename);
+    lexer(code);
+
+    Parser parser(Lexer::tokenz);
 
     while (parser.getCurrentToken().token_type != tok_eof) {
         auto func = parser.parseFunction();
@@ -28,38 +31,31 @@ void compile_Run(std::vector<TokenStore>& tokens) {
     if (llvm::verifyModule(*Module, &rso))
         std::cerr << "[MODULE] ->" << verifyOutput << "\n";
 
-    optimize();
-    Module->print(llvm::outs(), nullptr);
+} 
+
+void usage() {
+
+    std::cout << "\n****** LLVM based dalg language by d06i ***********\n" <<
+        "For LLVM IR code : dalg.exe input.dlag output.ll \n" <<
+        "For executable file: clang output.ll -o output.exe\n";
+
 }
+ 
+int main( int argc, const char* argv[] ) {
 
+    if (argc < 3) {
+        usage();
+        return -1;
+    }
 
-
-int main() {
-
-    const std::string& code = R"(
-        fn q(a, b) { a + b }
-        
-        fn string_test() { 
-            c = "blah blah blah!!!"; 
-            d = 4 + 1; 
-            print(d)
-        }
+    if (argc == 3) {
+        compile_Run( argv[1] );
+        write2File ( argv[2] );
+        std::cout << "LLVM IR writed!\n";
+    }
+    else
+        std::cerr << "Write failed!\n";
      
-    )";
-
-    lexer(code);
-
-    write();
-
-    try
-    {
-        std::cout << code << "\n\n";
-        compile_Run(Lexer::tokenz);
-    }
-    catch (const std::exception& e)
-    {
-        std::cout << "[!] " << e.what();
-    }
 
     return 0;
 }

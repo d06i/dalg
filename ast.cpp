@@ -128,7 +128,7 @@ llvm::Value* AssignmentExprAST::codegen() {
     llvm::Value* var = NamedValues[name];
     if (!var) {
         llvm::AllocaInst* alloca = Builder.CreateAlloca(llvm::Type::getDoubleTy(Context), nullptr, name);
-        // Builder.CreateStore(value, alloca);
+        Builder.CreateStore(value, alloca);
         NamedValues[name] = alloca;
     }
     else

@@ -194,7 +194,7 @@ std::unique_ptr<ExprAST> Parser::parseAssignment() {
 
     if (getCurrentToken().token_type != tok_semicolon)
         throw std::runtime_error("Expected ';' after assignment.");
-    getNextToken(); // skip semicolon
+    getNextToken(); // skip ";" 
 
     return std::make_unique<AssignmentExprAST>(n, std::move(val));
 }

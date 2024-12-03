@@ -4,6 +4,9 @@
 
 #include "parser.h"
 
+#include <sstream>
+#include <fstream>
+
 // LLVM Optimizations
 void optimize() {
     llvm::PassBuilder passBuilder;
@@ -54,4 +57,39 @@ void write() {
         std::cout << "\n";
     }
     std::cout << "\n";
+}
+
+std::string readFile(const std::string& filename) {
+
+    std::ifstream file(filename);
+    std::string temp;
+    std::ostringstream oss;
+
+    if (!file){
+        std::cerr << filename << " is not found!\n";
+        return 0;
+    }
+
+    while (std::getline(file, temp))
+        oss << temp << "\n";
+
+    return oss.str();
+}
+
+void write2File(const std::string& filename, bool opt = false) {
+
+    std::error_code error;
+    llvm::raw_fd_ostream filestream(filename + ".ll", error);
+
+    if (error) {
+        llvm::errs() << "File not found! -> " << error.message() << "\n";
+        return;
+    }
+
+    if (opt)
+        optimize();
+
+    Module->print(filestream, nullptr);
+
+    filestream.close();
 }
