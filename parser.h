@@ -9,7 +9,7 @@
 
 class Parser {
     std::vector<TokenStore>& tokens;
-    size_t currentToken = 0;
+    size_t currentToken = 0; 
 public:
     Parser(std::vector<TokenStore>& t) : tokens(t) {}
 
@@ -22,14 +22,14 @@ public:
     std::unique_ptr<ExprAST> parsePrimary();
     std::unique_ptr<ExprAST> parseFunctionCall(const std::string& callee);
     std::unique_ptr<ExprAST> parseIdentifier();
-    std::unique_ptr<ExprAST> parseBinaryOp();
+    std::unique_ptr<ExprAST> parseBinaryOp(int min_prec);
     std::unique_ptr<ExprAST> parseExpression();
     std::unique_ptr<ExprAST> parseBlock();
     std::unique_ptr<ExprAST> parseAssignment();
     std::unique_ptr<PrototypeAST> parsePrototype();
     std::unique_ptr<FunctionAST> parseFunction();
 
-    bool isOperator(Token tok);
-  //  void throwError(const TokenStore& token, const std::string& msg);
-    void throwError(const std::string& msg);
-};
+    bool isOperator(Token tok); 
+    void parserError(const std::string& msg);
+    int  op_precedence(const std::string& op);
+};  
