@@ -1,6 +1,7 @@
 #include "parser.h"
 
 TokenStore& Parser::getCurrentToken() {
+
     if (currentToken >= tokens.size()) {
         static TokenStore eofTok = { "", tok_eof };
         return eofTok;
@@ -29,7 +30,7 @@ std::unique_ptr<ExprAST> Parser::parseString() {
 std::unique_ptr<ExprAST> Parser::parsePrint() {
     getNextToken(); // skip "print"
     if (getCurrentToken().token_type != tok_left_paren)
-        throw std::runtime_error("Expected '(' after 'print'");
+        throwError("Expected '(' after 'print'");
     getNextToken(); // skip '('
 
     auto expr = parseExpression();
@@ -37,7 +38,7 @@ std::unique_ptr<ExprAST> Parser::parsePrint() {
         std::cerr << "Invalid expression in print statement.\n";
 
     if (getCurrentToken().token_type != tok_right_paren)
-        throw std::runtime_error("Expected ')' after print expression.");
+        throwError("Expected ')' after print expression.");
     getNextToken(); // skip ')'
 
     return std::make_unique<PrintExprAST>(std::move(expr));
@@ -45,22 +46,16 @@ std::unique_ptr<ExprAST> Parser::parsePrint() {
 
 std::unique_ptr<ExprAST> Parser::parseIfElse() {
     getNextToken(); // skip 'if'
-    if (getCurrentToken().token_type != tok_left_paren)
-        throw std::runtime_error("Expected '(' after 'if'");
-    getNextToken(); // skip '('
 
     auto cond = parseExpression();
-    if (getCurrentToken().token_type != tok_right_paren)
-        throw std::runtime_error("Expected ')' after if condition.");
-    getNextToken(); // skip ')'
 
     if (getCurrentToken().token_type != tok_left_brace)
-        throw std::runtime_error("Expected '{' to start 'then' block.");
+        throwError("Expected '{' to start 'then' block.");
     getNextToken(); // skip '{'
 
     auto thenExpr = parseBlock();
     if (getCurrentToken().token_type != tok_right_brace)
-        throw std::runtime_error("Expected '}' to end 'then' block.");
+        throwError("Expected '}' to end 'then' block.");
     getNextToken(); // skip '}'
 
     // Check for 'else'
@@ -69,12 +64,12 @@ std::unique_ptr<ExprAST> Parser::parseIfElse() {
         getNextToken(); // skip 'else'
 
         if (getCurrentToken().token_type != tok_left_brace)
-            throw std::runtime_error("Expected '{' to start 'else' block.");
+            throwError("Expected '{' to start 'else' block.");
         getNextToken(); // skip '{'
 
         elseExpr = parseBlock();
         if (getCurrentToken().token_type != tok_right_brace)
-            throw std::runtime_error("Expected '}' to end 'else' block.");
+            throwError("Expected '}' to end 'else' block.");
         getNextToken(); // skip '}'
     }
 
@@ -87,12 +82,12 @@ std::unique_ptr<ExprAST> Parser::parseIfElse() {
 std::unique_ptr<ExprAST> Parser::parsePrimary() {
     switch (getCurrentToken().token_type) {
     case tok_identifier: return parseIdentifier();
-    case tok_number: return parseNumber();
-    case tok_string: return parseString();
-    case tok_print: return parsePrint();
-    case tok_if: return parseIfElse();
+    case tok_number:     return parseNumber();
+    case tok_string:     return parseString();
+    case tok_print:      return parsePrint();
+    case tok_if:         return parseIfElse();
     default:
-        throw std::runtime_error("Unknown token at position: " + std::to_string(currentToken) + " -> " + getCurrentToken().name);
+        throwError("Unknown token at position: " + std::to_string(currentToken) + " -> " + getCurrentToken().name);
     }
 }
 
@@ -106,7 +101,7 @@ std::unique_ptr<ExprAST> Parser::parseFunctionCall(const std::string& callee) {
         if (getCurrentToken().token_type == tok_comma)
             getNextToken();
         else if (getCurrentToken().token_type != tok_right_paren)
-            throw std::runtime_error("Expected ',' or ')' in function call.");
+            throwError("Expected ',' or ')' in function call.");
     }
 
     getNextToken(); // skip ')'
@@ -169,7 +164,7 @@ std::unique_ptr<ExprAST> Parser::parseBlock() {
                     if (getCurrentToken().token_type == tok_semicolon)
                         getNextToken();
                     else
-                        throw std::runtime_error("Expected ';' after expression.");
+                        throwError("Expected ';' after expression.");
         */
 
     }
@@ -183,7 +178,7 @@ std::unique_ptr<ExprAST> Parser::parseAssignment() {
     getNextToken(); // skip identifier
 
     if (getCurrentToken().token_type != tok_equals) {
-        throw std::runtime_error("Expected '=' after variable name.");
+        throwError("Expected '=' after variable name.");
     }
 
     getNextToken(); // skip "="
@@ -193,21 +188,23 @@ std::unique_ptr<ExprAST> Parser::parseAssignment() {
         return nullptr;
 
     if (getCurrentToken().token_type != tok_semicolon)
-        throw std::runtime_error("Expected ';' after assignment.");
+        throwError("Expected ';' after assignment.");
     getNextToken(); // skip ";" 
 
     return std::make_unique<AssignmentExprAST>(n, std::move(val));
 }
 
+
 std::unique_ptr<PrototypeAST> Parser::parsePrototype() {
     if (getCurrentToken().token_type != tok_identifier)
-        throw std::runtime_error("Expected function name not available!");
+        throwError("Expected function name not available!");
 
     std::string FuncName = getCurrentToken().name;
     getNextToken(); // skip function name
 
     if (getCurrentToken().token_type != tok_left_paren)
-        throw std::runtime_error("Expected '(' after function name.");
+      //  throwError( error_check(getCurrentToken()) + "Expected '(' after function name.") ;
+    throwError("Expected '(' after function name.");
     getNextToken(); // skip '('
 
     std::vector<std::string> args;
@@ -215,13 +212,13 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype() {
         if (getCurrentToken().token_type == tok_identifier)
             args.push_back(getCurrentToken().name);
         else
-            throw std::runtime_error("Expected identifier in function arguments.");
+            throwError("Expected identifier in function arguments.");
         getNextToken();
 
         if (getCurrentToken().token_type == tok_comma)
             getNextToken();
         else if (getCurrentToken().token_type != tok_right_paren)
-            throw std::runtime_error("Expected ',' or ')' in function arguments.");
+            throwError("Expected ',' or ')' in function arguments.");
     }
 
     getNextToken(); // skip ')'
@@ -231,23 +228,23 @@ std::unique_ptr<PrototypeAST> Parser::parsePrototype() {
 
 std::unique_ptr<FunctionAST> Parser::parseFunction() {
     if (getCurrentToken().token_type != tok_fn)
-        throw std::runtime_error("Expected 'fn' keyword not available! Current Token -> " + getCurrentToken().name);
+        throwError("Expected 'fn' keyword not available! Current Token -> " + getCurrentToken().name);
 
     getNextToken(); // skip 'fn'
 
     if (getCurrentToken().token_type != tok_identifier)
-        throw std::runtime_error("Expected function name not available!");
+        throwError("Expected function name not available!");
 
     auto proto = parsePrototype();
 
     if (getCurrentToken().token_type != tok_left_brace)
-        throw std::runtime_error("Expected '{' to start function body.");
+        throwError("Expected '{' to start function body.");
     getNextToken(); // skip '{'
 
     auto body = parseBlock();
 
     if (getCurrentToken().token_type != tok_right_brace)
-        throw std::runtime_error("Expected '}' to end function body.");
+        throwError("Expected '}' to end function body.");
     getNextToken(); // skip '}'
 
     return std::make_unique<FunctionAST>(std::move(proto), std::move(body));
@@ -257,3 +254,10 @@ bool Parser::isOperator(Token tok) {
     return tok == tok_plus || tok == tok_minus || tok == tok_multiply || tok == tok_divide ||
         tok == tok_eq || tok == tok_ne || tok == tok_lt || tok == tok_gt || tok == tok_le || tok == tok_ge;
 }
+
+void Parser::throwError(const std::string& msg) { 
+    const auto token = getCurrentToken();
+    const std::string error = "Line: " + std::to_string(token.line) + " | " + msg; 
+    throw std::runtime_error(error);
+}
+ 

@@ -12,10 +12,10 @@ void initializeLLVM() {
 void compile_Run( const std::string& filename ) {
     initializeLLVM();
 
-    auto code = readFile(filename);
-    lexer(code);
-
-    Parser parser(Lexer::tokenz);
+    const auto code = readFile(filename);
+    auto tokens = lexer(code);
+ 
+    Parser parser(tokens);
 
     while (parser.getCurrentToken().token_type != tok_eof) {
         auto func = parser.parseFunction();
@@ -43,19 +43,28 @@ void usage() {
  
 int main( int argc, const char* argv[] ) {
 
-    if (argc < 3) {
-        usage();
-        return -1;
-    }
+    try {
 
-    if (argc == 3) {
-        compile_Run( argv[1] );
-        write2File ( argv[2] );
-        std::cout << "LLVM IR writed!\n";
+        if (argc == 2) {
+            const auto src = readFile(argv[1]);
+            auto token = lexer(src);
+            write(token);
+        } 
+
+        if (argc == 3) {
+            std::cout << "Compiling...\n";
+            compile_Run(argv[1]);
+            write2File(argv[2]);
+            std::cout << "LLVM IR writed!\n";
+        }
+        else
+            std::cerr << "Write failed!\n";
     }
-    else
-        std::cerr << "Write failed!\n";
-     
+    catch (const std::exception& err) {
+        std::cerr << "Error: " << err.what() << "\n";
+        usage();
+        return 1;
+    } 
 
     return 0;
 }

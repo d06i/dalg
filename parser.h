@@ -2,9 +2,10 @@
 
 #include <vector>
 #include <memory>
+#include <map>
 
 #include "lexer.h"
-#include "ast.h" 
+#include "ast.h"
 
 class Parser {
     std::vector<TokenStore>& tokens;
@@ -29,5 +30,6 @@ public:
     std::unique_ptr<FunctionAST> parseFunction();
 
     bool isOperator(Token tok);
-
+  //  void throwError(const TokenStore& token, const std::string& msg);
+    void throwError(const std::string& msg);
 };

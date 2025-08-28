@@ -2,13 +2,13 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
+#include <iostream> 
 
-enum Token {
+enum Token : uint8_t {
     tok_fn,
     tok_return,
     tok_number,
-    tok_identifier,
+    tok_identifier, 
     tok_equals,        // =
     tok_left_brace,    // {
     tok_right_brace,   // }
@@ -22,7 +22,7 @@ enum Token {
     tok_string,
     tok_comma,         // , 
     tok_print,
-    tok_if,
+    tok_if, 
     tok_else,
     tok_eof,
     tok_unk,
@@ -32,16 +32,22 @@ enum Token {
     tok_lt,            // <
     tok_gt,            // >
     tok_le,            // <=
-    tok_ge             // >=
+    tok_ge,            // >=
+    // bitwise Operators
+    tok_or,            // || // wip
+    tok_and,           // && // wip
+    tok_not,           // && // wip
+    tok_for,           //wip
+    tok_while,         //wip  
+    tok_comment_debug
 };
 
 struct TokenStore {
-    std::string name;
-    Token token_type;
-};
+    std::string  name;
+    Token        token_type;
+    int          column = 0;
+    int          line   = 0;
+     
+}; 
 
-namespace Lexer {
-    extern std::vector<TokenStore> tokenz;
-}
-
-void lexer(const std::string& source);
+std::vector<TokenStore> lexer(const std::string& source);

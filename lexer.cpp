@@ -1,60 +1,85 @@
 #include "lexer.h"
+  
+std::vector<TokenStore> lexer(const std::string& source) {
 
-namespace Lexer {
     std::vector<TokenStore> tokenz;
-}
-
-void lexer(const std::string& source) {
     size_t i = 0;
+    int line = 1, column = 1;
+
     while (i < source.length()) {
         char c = source[i];
 
         // skip whitespaces
         if (isspace(source[i])) {
-            i++;
+            if (source[i] == '\n') {
+                line++;
+                column = 1;
+            } else
+                column++;
+            i++; 
+            continue;
+        }   
+ 
+        // comment
+        if ( c == '#') { 
+            i++; 
+            column++;
+            while (i < source.length() && source[i] != '\n') {
+                i++;
+                column++;
+            } 
             continue;
         }
-
-        // keyword check
+                 
+        // keywords
         if (isalpha(c)) {
             std::string identifier;
             while (i < source.length() && (isalpha(source[i]) || source[i] == '_')) {
                 identifier += source[i];
                 i++;
+                column++;
             }
 
             if (identifier == "fn")
-                Lexer::tokenz.push_back({ identifier, tok_fn });
+                tokenz.push_back({ identifier, tok_fn,  column, line });
             else if (identifier == "return")
-                Lexer::tokenz.push_back({ identifier, tok_return });
+                tokenz.push_back({ identifier, tok_return, column, line });
             else if (identifier == "print")
-                Lexer::tokenz.push_back({ identifier, tok_print });
+                tokenz.push_back({ identifier, tok_print, column, line });
             else if (identifier == "if")
-                Lexer::tokenz.push_back({ identifier, tok_if });
+                tokenz.push_back({ identifier, tok_if, column, line });
             else if (identifier == "else")
-                Lexer::tokenz.push_back({ identifier, tok_else });
+                tokenz.push_back({ identifier, tok_else, column, line });
+            else if (identifier == "for")
+                tokenz.push_back({ identifier, tok_for, column, line });
+            else if (identifier == "while")
+                tokenz.push_back({ identifier, tok_while, column, line });
             else
-                Lexer::tokenz.push_back({ identifier, tok_identifier });
+                tokenz.push_back({ identifier, tok_identifier, column, line });
             continue;
         }
 
-        // operator check
+        // Strings
         if (c == '"') {
 
             std::string str;
             i++;
+            column++;
 
             while (i < source.length() && source[i] != '"') {
                 str += source[i];
                 i++;
+                column++;
             }
 
             if (i < source.length() && source[i] == '"') {
-                Lexer::tokenz.push_back({ str, tok_string });
+                tokenz.push_back({ str, tok_string });
                 i++;
+                column++;
             }
             else
                 std::cerr << "String literal not closed.";
+
             continue;
         }
 
@@ -64,61 +89,70 @@ void lexer(const std::string& source) {
             while (i < source.length() && (isdigit(source[i]) || source[i] == '.')) {
                 number += source[i];
                 i++;
-            }
-            Lexer::tokenz.push_back({ number, tok_number });
+                column++;
+            }   
+            tokenz.push_back({ number, tok_number, column, line });
             continue;
         }
 
         // Compare Operators 
         if (c == '=') {
             if (i + 1 < source.length() && source[i + 1] == '=') {
-                Lexer::tokenz.push_back({ "==", tok_eq });
+                tokenz.push_back({ "==", tok_eq, column, line });
                 i += 2;
+                column += 2;
                 continue;
             }
             else {
-                Lexer::tokenz.push_back({ "=", tok_equals });
+                tokenz.push_back({ "=", tok_equals, column, line });
                 i++;
+                column++;
                 continue;
             }
         }
 
         if (c == '!') {
             if (i + 1 < source.length() && source[i + 1] == '=') {
-                Lexer::tokenz.push_back({ "!=", tok_ne });
+                tokenz.push_back({ "!=", tok_ne, column, line });
                 i += 2;
+                column += 2;
                 continue;
             }
             else {
                 std::string unknown(1, source[i]);
-                Lexer::tokenz.push_back({ unknown, tok_unk });
+                tokenz.push_back({ unknown, tok_unk, column, line });
                 i++;
+                column++;
                 continue;
             }
         }
 
         if (c == '<') {
             if (i + 1 < source.length() && source[i + 1] == '=') {
-                Lexer::tokenz.push_back({ "<=", tok_le });
+                tokenz.push_back({ "<=", tok_le, column, line });
                 i += 2;
+                column += 2;
                 continue;
             }
             else {
-                Lexer::tokenz.push_back({ "<", tok_lt });
+                tokenz.push_back({ "<", tok_lt, column, line });
                 i++;
+                column++;
                 continue;
             }
         }
 
         if (c == '>') {
             if (i + 1 < source.length() && source[i + 1] == '=') {
-                Lexer::tokenz.push_back({ ">=", tok_ge });
+                tokenz.push_back({ ">=", tok_ge, column, line });
                 i += 2;
+                column += 2;
                 continue;
             }
             else {
-                Lexer::tokenz.push_back({ ">", tok_gt });
+                tokenz.push_back({ ">", tok_gt, column, line });
                 i++;
+                column++;
                 continue;
             }
         }
@@ -126,50 +160,63 @@ void lexer(const std::string& source) {
         // Special characters
         switch (c) {
         case '{':
-            Lexer::tokenz.push_back({ "{", tok_left_brace });
+            tokenz.push_back({ "{", tok_left_brace, column, line });
             i++;
+            column++;
             continue;
         case '}':
-            Lexer::tokenz.push_back({ "}", tok_right_brace });
+            tokenz.push_back({ "}", tok_right_brace, column, line });
             i++;
+            column++;
             continue;
         case '(':
-            Lexer::tokenz.push_back({ "(", tok_left_paren });
+            tokenz.push_back({ "(", tok_left_paren, column, line });
             i++;
+            column++;
             continue;
         case ')':
-            Lexer::tokenz.push_back({ ")", tok_right_paren });
+            tokenz.push_back({ ")", tok_right_paren, column, line });
             i++;
+            column++;
             continue;
         case '+':
-            Lexer::tokenz.push_back({ "+", tok_plus });
+            tokenz.push_back({ "+", tok_plus, column, line });
             i++;
+            column++;
             continue;
         case '-':
-            Lexer::tokenz.push_back({ "-", tok_minus });
+            tokenz.push_back({ "-", tok_minus, column, line });
             i++;
+            column++;
             continue;
         case '*':
-            Lexer::tokenz.push_back({ "*", tok_multiply });
+            tokenz.push_back({ "*", tok_multiply, column, line });
             i++;
+            column++;
             continue;
         case '/':
-            Lexer::tokenz.push_back({ "/", tok_divide });
+            tokenz.push_back({ "/", tok_divide, column, line });
             i++;
+            column++;
             continue;
         case ';':
-            Lexer::tokenz.push_back({ ";", tok_semicolon });
+            tokenz.push_back({ ";", tok_semicolon, column, line });
             i++;
+            column++;
             continue;
         case ',':
-            Lexer::tokenz.push_back({ ",", tok_comma });
+            tokenz.push_back({ ",", tok_comma, column, line });
             i++;
+            column++;
             continue;
         }
 
         // unknowns
         std::string unknown(1, source[i]);
-        Lexer::tokenz.push_back({ unknown, tok_unk });
+        tokenz.push_back({ unknown, tok_unk, column, line });
         i++;
+        column++;
     }
-}
+
+    return tokenz;
+} 
