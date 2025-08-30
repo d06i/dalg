@@ -15,17 +15,18 @@ public:
 
     TokenStore& getCurrentToken();
     TokenStore& getNextToken();
-    std::unique_ptr<ExprAST> parseNumber();
-    std::unique_ptr<ExprAST> parseString();
-    std::unique_ptr<ExprAST> parsePrint();
-    std::unique_ptr<ExprAST> parseIfElse();
-    std::unique_ptr<ExprAST> parsePrimary();
-    std::unique_ptr<ExprAST> parseFunctionCall(const std::string& callee);
-    std::unique_ptr<ExprAST> parseIdentifier();
-    std::unique_ptr<ExprAST> parseBinaryOp(int min_prec);
-    std::unique_ptr<ExprAST> parseExpression();
-    std::unique_ptr<ExprAST> parseBlock();
-    std::unique_ptr<ExprAST> parseAssignment();
+    ExprPtr parseNumber();
+    ExprPtr parseString();
+    ExprPtr parsePrint();
+    ExprPtr parseIfElse();
+    ExprPtr parsePrimary();
+    ExprPtr parseFunctionCall(const std::string& callee);
+    ExprPtr parseIdentifier();
+    ExprPtr parseBinaryOp(int min_prec);
+    ExprPtr parseExpression();
+    ExprPtr parseBlock();
+    ExprPtr parseAssignment();
+    ExprPtr parseElse();
     std::unique_ptr<PrototypeAST> parsePrototype();
     std::unique_ptr<FunctionAST> parseFunction();
 

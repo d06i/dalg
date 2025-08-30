@@ -18,6 +18,9 @@ extern llvm::IRBuilder<> Builder;
 extern std::unique_ptr<llvm::Module> Module;
 extern std::map<std::string, llvm::Value*> NamedValues;
 
+class ExprAST;
+using ExprPtr = std::unique_ptr<ExprAST>;
+
 // All Expressions
 class ExprAST {
 public:
@@ -56,9 +59,9 @@ public:
 // Binary Operands
 class BinaryExprAST : public ExprAST {
     std::string op;
-    std::unique_ptr<ExprAST> lhs, rhs;
+    ExprPtr lhs, rhs;
 public:
-    BinaryExprAST(const std::string& x, std::unique_ptr<ExprAST> l, std::unique_ptr<ExprAST> r)
+    BinaryExprAST(const std::string& x, ExprPtr l, ExprPtr r)
         : op(x), lhs(std::move(l)), rhs(std::move(r)) {
     }
 
@@ -82,9 +85,9 @@ public:
 // Function Call
 class CallExprAST : public ExprAST {
     std::string Callee;
-    std::vector<std::unique_ptr<ExprAST>> Args;
+    std::vector<ExprPtr> Args;
 public:
-    CallExprAST(std::string c, std::vector<std::unique_ptr<ExprAST>> x) : Callee(c), Args(std::move(x)) {}
+    CallExprAST(std::string c, std::vector<ExprPtr> x) : Callee(c), Args(std::move(x)) {}
 
     llvm::Value* codegen();
 };
@@ -92,9 +95,9 @@ public:
 // Function
 class FunctionAST : public ExprAST {
     std::unique_ptr<PrototypeAST> proto;
-    std::unique_ptr<ExprAST> body;
+    ExprPtr body;
 public:
-    FunctionAST(std::unique_ptr<PrototypeAST> x, std::unique_ptr<ExprAST> y)
+    FunctionAST(std::unique_ptr<PrototypeAST> x, ExprPtr y)
         : proto(std::move(x)), body(std::move(y)) {
     }
 
@@ -104,39 +107,42 @@ public:
 // Assigment
 class AssignmentExprAST : public ExprAST {
     std::string name;
-    std::unique_ptr<ExprAST> val;
+    ExprPtr val;
 public:
-    AssignmentExprAST(const std::string& x, std::unique_ptr<ExprAST> y)
+    AssignmentExprAST(const std::string& x, ExprPtr y)
         : name(x), val(std::move(y)) {
     }
 
     llvm::Value* codegen();
 };
-
-
+ 
 // Block Expression
 class BlockExprAST : public ExprAST {
-    std::vector<std::unique_ptr<ExprAST>> expr;
+    std::vector<ExprPtr> expr;
 public:
-    BlockExprAST(std::vector<std::unique_ptr<ExprAST>> x) : expr(std::move(x)) {}
+    BlockExprAST(std::vector<ExprPtr> block_vec ) : expr(std::move( block_vec )) {}
+
+    bool isEmpty() const {
+        return expr.empty();
+    }
 
     llvm::Value* codegen();
 };
 
 // Printf linking  
 class PrintExprAST : public ExprAST {
-    std::unique_ptr<ExprAST> expr;
+    ExprPtr expr;
 public:
-    PrintExprAST(std::unique_ptr<ExprAST> x) : expr(std::move(x)) {}
+    PrintExprAST(ExprPtr x) : expr(std::move(x)) {}
 
     llvm::Value* codegen();
 };
 
 // If-Else Expresion
 class ifExprAST : public ExprAST {
-    std::unique_ptr<ExprAST> Cond, Then, Else;
+    ExprPtr Cond, Then, Else;
 public:
-    ifExprAST(std::unique_ptr<ExprAST> cond, std::unique_ptr<ExprAST> thenExpr, std::unique_ptr<ExprAST> elseExpr)
+    ifExprAST(ExprPtr cond, ExprPtr thenExpr, ExprPtr elseExpr)
         : Cond(std::move(cond)), Then(std::move(thenExpr)), Else(std::move(elseExpr)) {
     }
 
