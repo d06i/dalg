@@ -24,7 +24,7 @@ void optimize() {
 
     llvm::ModulePassManager mpm = passBuilder.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
 
-    mpm.run(*Module, mam);
+    mpm.run(*g_Module, mam);
 }
 
 // Token Write
@@ -102,7 +102,7 @@ void write2File(const std::string& filename, bool opt = false) {
     if (opt)
         optimize();
 
-    Module->print(filestream, nullptr);
+    g_Module->print(filestream, nullptr);
 
     filestream.close();
 }

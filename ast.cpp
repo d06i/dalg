@@ -2,9 +2,9 @@
 
 llvm::LLVMContext Context;
 llvm::IRBuilder<> Builder(Context);
-std::unique_ptr<llvm::Module> Module;
+std::unique_ptr<llvm::Module> g_Module;
 std::map<std::string, llvm::Value*> NamedValues;
-
+ 
 // Numbers
 llvm::Value* NumberExprAST::codegen() {
 	return llvm::ConstantFP::get(Context, llvm::APFloat(val));
@@ -24,7 +24,10 @@ llvm::Value* VariableExprAST::codegen() {
 	if (!V)
 		throw std::runtime_error("[VariableExprAST] Unknown variable name: " + name);
 
-	return Builder.CreateLoad(llvm::Type::getDoubleTy(Context), V, name);
+	if (V->getType()->isPointerTy())
+		return Builder.CreateLoad(llvm::Type::getDoubleTy(Context), V, name);
+	else
+		return V;
 }
 
 // Binary Operands
@@ -64,7 +67,7 @@ llvm::Value* BinaryExprAST::codegen() {
 llvm::Function* PrototypeAST::codegen() {
 	std::vector<llvm::Type*> doubles(Args.size(), llvm::Type::getDoubleTy(Context));
 	llvm::FunctionType* FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(Context), doubles, false);
-	llvm::Function* F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, name, Module.get());
+	llvm::Function* F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, name, g_Module.get());
 
 	uint64_t idx = 0;
 	for (auto& a : F->args())
@@ -75,7 +78,7 @@ llvm::Function* PrototypeAST::codegen() {
 
 // Function Call
 llvm::Value* CallExprAST::codegen() {
-	llvm::Function* CalleeFunc = Module->getFunction(Callee);
+	llvm::Function* CalleeFunc = g_Module->getFunction(Callee);
 	if (!CalleeFunc)
 		throw std::runtime_error("[CallExprAST] Unknown function referenced: " + Callee);
 
@@ -154,7 +157,7 @@ llvm::Value* PrintExprAST::codegen() {
 	if (!val)
 		std::cerr << "Expression failed.\n";
 
-	llvm::Function* PrintfFunc = Module->getFunction("printf");
+	llvm::Function* PrintfFunc = g_Module->getFunction("printf");
 	if (!PrintfFunc) {
 		llvm::FunctionType* printfType = llvm::FunctionType::get(
 			llvm::Type::getInt32Ty(Context),
@@ -162,7 +165,7 @@ llvm::Value* PrintExprAST::codegen() {
 			true
 		);
 
-		PrintfFunc = llvm::Function::Create(printfType, llvm::Function::ExternalLinkage, "printf", Module.get());
+		PrintfFunc = llvm::Function::Create(printfType, llvm::Function::ExternalLinkage, "printf", g_Module.get());
 	}
 
 	llvm::Value* formatSTR = nullptr;
@@ -198,9 +201,9 @@ llvm::Value* ifExprAST::codegen() {
 
 	llvm::Function* function = Builder.GetInsertBlock()->getParent();
 
-	llvm::BasicBlock* thenBlock = llvm::BasicBlock::Create(Context, "then", function);
-	llvm::BasicBlock* elseBlock = llvm::BasicBlock::Create(Context, "else");
-	llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(Context, "merge");
+	llvm::BasicBlock* thenBlock  = llvm::BasicBlock::Create(Context, "then", function);
+	llvm::BasicBlock* elseBlock  = llvm::BasicBlock::Create(Context, "else");
+	llvm::BasicBlock* mergeBlock = llvm::BasicBlock::Create(Context, "merge");
 
 	Builder.CreateCondBr(condV, thenBlock, elseBlock);
 
@@ -209,7 +212,7 @@ llvm::Value* ifExprAST::codegen() {
 	llvm::Value* thenVar = Then->codegen();
 	if (!thenVar)
 		throw std::runtime_error("[IfExprAST] Then expression failed.");
-	Builder.CreateBr(mergeBB);
+	Builder.CreateBr(mergeBlock);
 	thenBlock = Builder.GetInsertBlock();
 
 	// Else block
@@ -226,11 +229,11 @@ llvm::Value* ifExprAST::codegen() {
 		elseVar = llvm::ConstantFP::get(Context, llvm::APFloat(0.0));
 
 
-	Builder.CreateBr(mergeBB);
+	Builder.CreateBr(mergeBlock);
 	elseBlock = Builder.GetInsertBlock();
-	function->getBasicBlockList().push_back(mergeBB);
+	function->getBasicBlockList().push_back(mergeBlock);
 
-	Builder.SetInsertPoint(mergeBB);
+	Builder.SetInsertPoint(mergeBlock);
 
 	// Merge block
 	llvm::PHINode* phi = Builder.CreatePHI(llvm::Type::getDoubleTy(Context), 2, "if_tmp");
@@ -238,4 +241,70 @@ llvm::Value* ifExprAST::codegen() {
 	phi->addIncoming(elseVar, elseBlock);
 
 	return phi;
+}
+
+// for expression -> for x=0, x < 10, 1 { Body }  
+llvm::Value* forExprAST::codegen(){
+
+	llvm::Value* start = Start->codegen();
+	if (!start)
+		return nullptr;
+
+	BasicBlock* tempBlock = Builder.GetInsertBlock();
+	llvm::Function* func =  Builder.GetInsertBlock()->getParent();
+	
+	llvm::BasicBlock* startBlock = BasicBlock::Create(Context, "start", func);  
+	
+	Builder.CreateBr(startBlock);
+	Builder.SetInsertPoint(startBlock);
+
+	PHINode* var_phi = Builder.CreatePHI(Type::getDoubleTy(Context), 2, VarName);
+	var_phi->addIncoming(start, tempBlock);
+
+	llvm::AllocaInst* alloca = Builder.CreateAlloca(Type::getDoubleTy(Context), nullptr, VarName);
+	Builder.CreateStore(var_phi, alloca);
+	Value* oldVal = NamedValues[VarName];
+	NamedValues[VarName] = alloca;
+
+	if (!Body->codegen())
+		return nullptr;
+
+	// step
+	Value* stepVal = nullptr;
+	if (Step) {
+		stepVal = Step->codegen();
+		if (!stepVal)
+			return nullptr;
+	}
+	else
+		stepVal = ConstantFP::get(Context, APFloat(1.0));
+
+	// next iter
+	Value* nextVar = Builder.CreateFAdd(var_phi, stepVal, "nextVar");
+
+	// end
+	Value* EndCond = End->codegen();
+	if (!EndCond)
+		return nullptr;
+
+	Value* tempCond =nullptr;
+	if (EndCond->getType()->isDoubleTy())
+		tempCond = Builder.CreateFCmpONE(EndCond, ConstantFP::get(Context, APFloat(0.0)), "loopcond");
+	else
+		tempCond = EndCond;
+
+	BasicBlock* loopEnd = Builder.GetInsertBlock();
+	BasicBlock* AfterBlock = BasicBlock::Create(Context, "afterLoop", func);
+
+	var_phi->addIncoming(nextVar, loopEnd);
+
+	Builder.CreateCondBr(tempCond, startBlock, AfterBlock);
+	Builder.SetInsertPoint(AfterBlock);
+	 
+	if (oldVal)
+		NamedValues[VarName] = oldVal; // update val
+	else
+		NamedValues.erase(VarName);
+
+	return Constant::getNullValue(Type::getDoubleTy(Context));
 }

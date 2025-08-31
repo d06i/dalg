@@ -27,6 +27,8 @@ public:
     ExprPtr parseBlock();
     ExprPtr parseAssignment();
     ExprPtr parseElse();
+    ExprPtr parseFor();
+ //   ExprPtr parseWhile();
     std::unique_ptr<PrototypeAST> parsePrototype();
     std::unique_ptr<FunctionAST> parseFunction();
 

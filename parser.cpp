@@ -15,6 +15,33 @@ TokenStore& Parser::getNextToken() {
 	return getCurrentToken();
 }
 
+
+bool Parser::isOperator(Token tok) {
+	return tok == tok_plus || tok == tok_minus || tok == tok_multiply || tok == tok_divide ||
+		tok == tok_eq || tok == tok_ne || tok == tok_lt || tok == tok_gt || tok == tok_le || tok == tok_ge;
+}
+
+void Parser::parserError(const std::string& msg) {
+	const auto token = getCurrentToken();
+	const std::string currTokeInfo = " | Current token is => " + token.name;
+	const std::string error = "Line: " + std::to_string(token.line) + " | " + msg + currTokeInfo;
+	throw std::runtime_error(error);
+}
+
+// https://en.cppreference.com/w/cpp/language/operator_precedence.html
+int Parser::op_precedence(const std::string& op) {
+	std::map<std::string, int> op_pre;
+	op_pre["*"] = 10;
+	op_pre["/"] = 10;
+	op_pre["%"] = 10;
+	op_pre["+"] = 8;
+	op_pre["-"] = 8;
+	op_pre["<"] = 7;
+	op_pre[">"] = 7;
+
+	return op_pre[op] > 0 ? op_pre[op] : -1;
+}
+
 ExprPtr Parser::parseNumber() {
 	auto res = std::make_unique<NumberExprAST>(std::stod(getCurrentToken().name));
 	getNextToken();
@@ -119,6 +146,7 @@ ExprPtr Parser::parseBlock() {
 	std::vector<ExprPtr> expr;
 
 	while (getCurrentToken().token_type != tok_right_brace && getCurrentToken().token_type != tok_eof) {
+
 		if (getCurrentToken().token_type == tok_semicolon) {
 			getNextToken();
 			continue;
@@ -126,6 +154,12 @@ ExprPtr Parser::parseBlock() {
 
 		if (getCurrentToken().token_type == tok_if) {
 			expr.push_back(parseIfElse());
+			continue;
+		}
+
+
+		if (getCurrentToken().token_type == tok_for) {
+			expr.push_back(parseFor());
 			continue;
 		}
 
@@ -233,6 +267,7 @@ ExprPtr Parser::parseIfElse() {
 	return std::make_unique<ifExprAST>(std::move(cond), std::move(thenExpr), std::move(elseExpr));
 }
 
+// -> else { do_it_somethings } || else if { do_it_anything_else }
 ExprPtr Parser::parseElse() {
 
 	if (getCurrentToken().token_type == tok_else) {
@@ -259,28 +294,51 @@ ExprPtr Parser::parseElse() {
 	return std::make_unique<BlockExprAST>(std::vector<ExprPtr>());
 }
 
-bool Parser::isOperator(Token tok) {
-	return tok == tok_plus || tok == tok_minus || tok == tok_multiply || tok == tok_divide ||
-		tok == tok_eq || tok == tok_ne || tok == tok_lt || tok == tok_gt || tok == tok_le || tok == tok_ge;
-}
+// for now broken!!!
+// -> for x = 3, x < 50, 2 { Body }
+ExprPtr Parser::parseFor() {
 
-void Parser::parserError(const std::string& msg) {
-	const auto token = getCurrentToken();
-	const std::string currTokeInfo = " | Current token is => " + token.name;
-	const std::string error = "Line: " + std::to_string(token.line) + " | " + msg + currTokeInfo;
-	throw std::runtime_error(error);
-}
+	getNextToken(); // skip "for"
 
-// https://en.cppreference.com/w/cpp/language/operator_precedence.html
-int Parser::op_precedence(const std::string& op) {
-	std::map<std::string, int> op_pre;
-	op_pre["*"] = 10;
-	op_pre["/"] = 10;
-	op_pre["%"] = 10;
-	op_pre["+"] = 8;
-	op_pre["-"] = 8;
-	op_pre["<"] = 7;
-	op_pre[">"] = 7;
+	if (getCurrentToken().token_type != tok_identifier)
+		parserError("Expected identifier after 'for'");
 
-	return op_pre[op] > 0 ? op_pre[op] : -1;
+	// var shadowing
+	std::string varName = getCurrentToken().name;
+	getNextToken(); //  skip "identifier"
+	getNextToken(); //  skip "="
+
+	auto start = parseExpression();
+	if (!start)
+		return nullptr;
+
+	if (getCurrentToken().token_type != tok_comma)
+		parserError("Expected ',' after for start val");
+	getNextToken(); // skip ','
+
+	auto end = parseExpression();
+	if (!end)
+		return nullptr;
+
+	ExprPtr step = nullptr;
+	if (getCurrentToken().token_type == tok_comma) {
+		getNextToken();
+		step = parseExpression();
+		if (!step)
+			return nullptr;
+	}
+
+	if (getCurrentToken().token_type != tok_left_brace)
+		parserError("Expected '{' after for");
+	getNextToken(); // skip '{'
+
+	auto body = parseBlock();
+	if (!body)
+		return nullptr;
+
+	if (getCurrentToken().token_type != tok_right_brace)
+		parserError("Expected '}' after for body");
+	getNextToken(); // skip '}'
+
+	return std::make_unique<forExprAST>(varName, std::move(start), std::move(end), std::move(step), std::move(body));
 }

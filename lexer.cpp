@@ -40,22 +40,13 @@ std::vector<TokenStore> lexer(const std::string& source) {
                 column++;
             }
 
-            if (identifier == "fn")
-                tokenz.push_back({ identifier, tok_fn,  column, line });
-            else if (identifier == "return")
-                tokenz.push_back({ identifier, tok_return, column, line });
-            else if (identifier == "print")
-                tokenz.push_back({ identifier, tok_print, column, line });
-            else if (identifier == "if")
-                tokenz.push_back({ identifier, tok_if, column, line });
-            else if (identifier == "else")
-                tokenz.push_back({ identifier, tok_else, column, line });
-            else if (identifier == "for")
-                tokenz.push_back({ identifier, tok_for, column, line });
-            else if (identifier == "while")
-                tokenz.push_back({ identifier, tok_while, column, line });
-            else
+            // search keywords in hash table 
+            auto keyw = keywords.find(identifier);
+            if (keyw == keywords.end())
                 tokenz.push_back({ identifier, tok_identifier, column, line });
+            else
+                tokenz.push_back({ identifier, keyw->second,   column, line }); 
+
             continue;
         }
 

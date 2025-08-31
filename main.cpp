@@ -3,8 +3,8 @@
 
 void initializeLLVM() {
 
-	Module = std::make_unique<llvm::Module>("TEST", Context);
-	if (!Module)
+	g_Module = std::make_unique<llvm::Module>("TEST", Context);
+	if (!g_Module)
 		std::cout << "[initializeLLVM] Module is failed!";
 }
 
@@ -28,7 +28,7 @@ void compile_Run(const std::string& filename) {
 
 	std::string verifyOutput;
 	llvm::raw_string_ostream rso(verifyOutput);
-	if (llvm::verifyModule(*Module, &rso))
+	if (llvm::verifyModule(*g_Module, &rso))
 		std::cerr << "[MODULE] ->" << verifyOutput << "\n";
 
 }

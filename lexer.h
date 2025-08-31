@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <iostream> 
+#include <unordered_map> 
 
 enum Token : uint8_t {
     tok_fn,
@@ -48,6 +49,16 @@ struct TokenStore {
     int          column = 0;
     int          line   = 0;
      
-}; 
+};
+
+const std::unordered_map<std::string, Token> keywords{
+    {"fn",     tok_fn},
+    {"return", tok_return},
+    {"print",  tok_print},
+    {"if",     tok_if},
+    {"else",   tok_else},
+    {"for",    tok_for},
+    {"while",  tok_while},
+};
 
 std::vector<TokenStore> lexer(const std::string& source);

@@ -12,10 +12,12 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 
+using namespace llvm;
+
 // Globals
 extern llvm::LLVMContext Context;
 extern llvm::IRBuilder<> Builder;
-extern std::unique_ptr<llvm::Module> Module;
+extern std::unique_ptr<llvm::Module> g_Module;
 extern std::map<std::string, llvm::Value*> NamedValues;
 
 class ExprAST;
@@ -24,7 +26,7 @@ using ExprPtr = std::unique_ptr<ExprAST>;
 // All Expressions
 class ExprAST {
 public:
-    virtual ~ExprAST() = default;
+    virtual ~ExprAST() = default;  
     virtual llvm::Value* codegen() = 0;
 };
 
@@ -122,10 +124,6 @@ class BlockExprAST : public ExprAST {
 public:
     BlockExprAST(std::vector<ExprPtr> block_vec ) : expr(std::move( block_vec )) {}
 
-    bool isEmpty() const {
-        return expr.empty();
-    }
-
     llvm::Value* codegen();
 };
 
@@ -145,6 +143,29 @@ public:
     ifExprAST(ExprPtr cond, ExprPtr thenExpr, ExprPtr elseExpr)
         : Cond(std::move(cond)), Then(std::move(thenExpr)), Else(std::move(elseExpr)) {
     }
+
+    llvm::Value* codegen();
+};
+
+class forExprAST : public ExprAST {
+    std::string VarName;
+    ExprPtr Start, End, Step, Body;
+
+public:
+    forExprAST( const std::string& varname, ExprPtr start, ExprPtr end, ExprPtr step, ExprPtr body ):
+          VarName(varname),
+          Start(std::move(start)),
+          End(std::move(end)), 
+          Step(std::move(step)), 
+          Body(std::move(body)) {}
+
+    llvm::Value* codegen();
+};
+
+class WhileExprAST : public ExprAST {
+    ExprPtr Cond, Body;
+public:
+    WhileExprAST( ExprPtr cond, ExprPtr body) : Cond(std::move(cond)), Body(std::move(body)) {}
 
     llvm::Value* codegen();
 };
